@@ -1,4 +1,9 @@
 from datetime import date
+from functools import wraps
+import dotenv
+import os
+import smtplib
+
 from flask import Flask, abort, render_template, redirect, url_for, flash
 from flask_bootstrap import Bootstrap5
 from flask_ckeditor import CKEditor
@@ -7,27 +12,22 @@ from flask_login import UserMixin, login_user, LoginManager, current_user, logou
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, Text
-from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.orm import relationship
-# Import your forms from the forms.py
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
 
-'''
-Make sure the required packages are installed: 
-Open the Terminal in PyCharm (bottom left). 
+dotenv.load_dotenv
 
-On Windows type:
-python -m pip install -r requirements.txt
+SECRET = os.environ.get("PASSWD")
+MAIL_ADDRESS = os.environ.get("MY_EMAIL")
+MAIL_APP_PW = os.environ.get("MY_EMAIL_PASSWORD")
 
-On MacOS type:
-pip3 install -r requirements.txt
-
-This will install the packages from the requirements.txt for this project.
-'''
+basedir = os.path.abspath(os.path.dirname(__file__))
+db_path = os.path.join(basedir, "instance/posts.db")
+# print(db_path)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
+app.config['SECRET_KEY'] = SECRET
 ckeditor = CKEditor(app)
 Bootstrap5(app)
 
@@ -54,7 +54,7 @@ gravatar = Gravatar(app,
 # CREATE DATABASE
 class Base(DeclarativeBase):
     pass
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
@@ -207,9 +207,23 @@ def about():
     return render_template("about.html", current_user=current_user)
 
 
-@app.route("/contact")
+@app.route("/contact", methods=["GET", "POST"])
 def contact():
-    return render_template("contact.html", current_user=current_user)
+    if request.method == "POST":
+        data = request.form
+        send_email(data["name"], data["email"], data["phone"], data["message"])
+        return render_template("contact.html", msg_sent=True)
+    return render_template("contact.html", msg_sent=False)
+
+
+def send_email(name, email, phone, message):
+    email_message = f"Subject:New Message\n\nName: {name}\nEmail: {email}\nPhone: {phone}\nMessage:{message}"
+    connection = smtplib.SMTP("smtp.gmail.com", 587)
+    with connection:
+        connection.starttls()
+        connection.login(MAIL_ADDRESS, MAIL_APP_PW)
+        connection.sendmail(MAIL_ADDRESS, MAIL_APP_PW, email_message)
+
 
 
 # Register new users into the User database
@@ -271,5 +285,6 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('get_all_posts'))
+
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
