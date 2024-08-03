@@ -21,6 +21,8 @@ dotenv.load_dotenv()
 SECRET = os.environ.get("PASSWD")
 MAIL_ADDRESS = os.environ.get("MY_EMAIL")
 MAIL_APP_PW = os.environ.get("MY_EMAIL_PASSWORD")
+EMAIL_PROVIDER_SMTP_ADDRESS = os.environ.get("EMAIL_PROVIDER_SMTP_ADDRESS")
+SMTP_PORT = os.environ.get("SMTP_PORT")
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(basedir, "instance/posts.db")
@@ -211,11 +213,11 @@ def about():
 def contact():
     form = ContactForm()
     if form.validate_on_submit():
-        name = form.name.data
-        email = form.email.data
-        phone = form.phone.data
-        message = form.message.data
-        send_email(name, email, phone, message)
+        # name = form.name.data
+        # email = form.email.data
+        # phone = form.phone.data
+        # message = form.message.data
+        # send_email(name, email, phone, message)
         form = ContactForm(formdata=None)
         return render_template("contact.html", form=form, msg_sent=True)
     return render_template("contact.html", form=form, msg_sent=False)
@@ -223,7 +225,7 @@ def contact():
 
 def send_email(name, email, phone, message):
     email_message = f"Subject:New Message\n\nName: {name}\nEmail: {email}\nPhone: {phone}\nMessage:{message}"
-    connection = smtplib.SMTP("smtp.gmail.com", 587)
+    connection = smtplib.SMTP(EMAIL_PROVIDER_SMTP_ADDRESS, SMTP_PORT)
     with connection:
         connection.starttls()
         connection.login(MAIL_ADDRESS, MAIL_APP_PW)
